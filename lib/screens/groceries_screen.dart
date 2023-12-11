@@ -11,14 +11,20 @@ class GroceriesScreen extends StatefulWidget {
 }
 
 class _GroceriesScreenState extends State<GroceriesScreen> {
-  void _createItem() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (ctx) => const NewItemScreen()));
+  final List<GroceryItem> _groceriesList = [];
+
+  void _createItem() async {
+    GroceryItem? newItem = await Navigator.of(context).push<GroceryItem>(
+        MaterialPageRoute(builder: (ctx) => const NewItemScreen()));
+    if (newItem == null) {
+      return;
+    } else {
+      _groceriesList.add(newItem);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<GroceryItem> groceriesList = groceryItems;
     return Scaffold(
       appBar: AppBar(
         title: const Text("Your Groceries"),
@@ -31,15 +37,15 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
         ],
       ),
       body: ListView.builder(
-        itemCount: groceriesList.length,
+        itemCount: _groceriesList.length,
         itemBuilder: ((context, index) => ListTile(
-              title: Text(groceriesList[index].name),
+              title: Text(_groceriesList[index].name),
               leading: Container(
                 width: 24,
                 height: 24,
-                color: groceriesList[index].category.color,
+                color: _groceriesList[index].category.color,
               ),
-              trailing: Text(groceriesList[index].quantity.toString()),
+              trailing: Text(_groceriesList[index].quantity.toString()),
             )),
       ),
     );
