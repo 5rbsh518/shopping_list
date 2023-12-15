@@ -16,6 +16,7 @@ class GroceriesScreen extends StatefulWidget {
 class _GroceriesScreenState extends State<GroceriesScreen> {
   List<GroceryItem> _groceriesList = [];
   final log = Logger("GroceriesScreen");
+  String? _errorMessage;
   bool _isLoading = true;
   @override
   void initState() {
@@ -27,29 +28,47 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
     Uri url = Uri.https(
         "shopping-list-18e38-default-rtdb.europe-west1.firebasedatabase.app",
         'shopping-list.json');
-    final response = await http.get(url);
-    if (response.body == 'null') {
+    try {
+      final response = await http.get(url);
+      final isFetched = response.statusCode < 400;
+      if (!isFetched) {
+        log.severe(
+            "Error: Could not load data.\n Error code: ${response.statusCode}");
+        setState(() {
+          _errorMessage =
+              "Error: Could not fetch the data. Please try again later.";
+        });
+      }
+      if (response.body == 'null') {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      final Map<String, dynamic> listData = jsonDecode(response.body);
+      final List<GroceryItem> loadedList = [];
+      for (final item in listData.entries) {
+        final category = categories.entries
+            .firstWhere(
+                (element) => item.value["category"] == element.value.name)
+            .value;
+        loadedList.add(GroceryItem(
+            id: item.key,
+            name: item.value["name"],
+            quantity: item.value["quantity"],
+            category: category));
+      }
       setState(() {
+        _groceriesList = loadedList;
         _isLoading = false;
       });
-      return;
+    } catch (error) {
+      log.severe(error);
+      setState(() {
+        _errorMessage =
+            "Could not load data. Please check your internet connection.";
+      });
     }
-    final Map<String, dynamic> listData = jsonDecode(response.body);
-    final List<GroceryItem> loadedList = [];
-    for (final item in listData.entries) {
-      final category = categories.entries
-          .firstWhere((element) => item.value["category"] == element.value.name)
-          .value;
-      loadedList.add(GroceryItem(
-          id: item.key,
-          name: item.value["name"],
-          quantity: item.value["quantity"],
-          category: category));
-    }
-    setState(() {
-      _groceriesList = loadedList;
-      _isLoading = false;
-    });
   }
 
   void _createItem() async {
@@ -140,6 +159,17 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
     if (_isLoading) {
       content = const Center(
         child: CircularProgressIndicator(),
+      );
+    }
+    if (_errorMessage != null) {
+      content = Center(
+        child: Text(
+          _errorMessage!,
+          style: TextStyle(
+              fontSize: 20,
+              color: Theme.of(context).colorScheme.inversePrimary,
+              fontWeight: FontWeight.bold),
+        ),
       );
     }
 
